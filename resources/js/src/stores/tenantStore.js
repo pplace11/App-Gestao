@@ -71,7 +71,7 @@ export const useTenantStore = defineStore('tenant-store', () => {
     },
     // Onboarding self-service
     async createTenantOnboarding(payload) {
-      return await post('/tenants', payload);
+      return await post('/tenants/onboarding', payload);
     },
     async updateOnboardingChecklist(payload) {
       return await put('/tenants/onboarding-checklist', { onboarding: payload });

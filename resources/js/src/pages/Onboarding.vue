@@ -10,6 +10,9 @@
         <label for="tenant-slug">Slug do Tenant</label>
         <input id="tenant-slug" v-model="tenantSlug" required />
       </div>
+      <div>
+        <PlanCardSelect v-model="selectedPlanId" />
+      </div>
       <button type="submit">Concluir</button>
     </form>
   </div>
@@ -18,14 +21,16 @@
 <script setup>
 import { ref } from 'vue';
 import { useTenantStore } from '../stores/tenantStore';
+import PlanCardSelect from '../components/PlanCardSelect.vue';
 
 const tenantStore = useTenantStore();
 const tenantName = ref('');
 const tenantSlug = ref('');
+const selectedPlanId = ref(null);
 
 const submitOnboarding = async () => {
   try {
-    await tenantStore.createTenant({ name: tenantName.value, slug: tenantSlug.value });
+    await tenantStore.createTenant({ name: tenantName.value, slug: tenantSlug.value, plan_id: selectedPlanId.value });
     alert('Onboarding concluído com sucesso!');
   } catch (error) {
     console.error('Erro ao concluir o onboarding:', error);

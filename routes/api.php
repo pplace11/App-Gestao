@@ -40,11 +40,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/switch', [TenantController::class, 'switch']);
         // Onboarding self-service
         Route::post('/onboarding', [\App\Http\Controllers\TenantOnboardingController::class, 'create']);
-        Route::get('/{company}/onboarding-checklist', [\App\Http\Controllers\TenantOnboardingController::class, 'onboardingChecklist']);
+        Route::get('/{tenant}/onboarding-checklist', [\App\Http\Controllers\TenantOnboardingController::class, 'onboardingChecklist']);
         // Upgrade/downgrade de plano
-        Route::post('/{company}/change-plan', [\App\Http\Controllers\TenantOnboardingController::class, 'changePlan']);
+        Route::post('/{tenant}/change-plan', [\App\Http\Controllers\TenantOnboardingController::class, 'changePlan']);
         // Logs de alterações de plano
-        Route::get('/{company}/plan-logs', [\App\Http\Controllers\TenantOnboardingController::class, 'planLogs']);
+        Route::get('/{tenant}/plan-logs', [\App\Http\Controllers\TenantOnboardingController::class, 'planLogs']);
         Route::put('/preferences', [TenantController::class, 'updatePreferences']);
         Route::put('/onboarding-checklist', [TenantController::class, 'updateOnboardingChecklist']);
     });
@@ -303,3 +303,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/activity-logs/{activity}', [ActivityLogController::class, 'show']);
     });
 });
+
+// Planos
+Route::get('/v1/plans', [\App\Http\Controllers\PlanController::class, 'index']);

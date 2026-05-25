@@ -76,4 +76,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(Company::class, 'owner_user_id');
     }
+        /**
+         * Relação com tenants (multi-tenant)
+         */
+        public function tenants()
+        {
+            return $this->belongsToMany(\App\Models\Company::class)->withPivot('role')->withTimestamps();
+        }
+
+        /**
+         * Retorna o tenant ativo da sessão
+         */
+        public function currentTenant()
+        {
+            $tenantId = session('tenant_id');
+            return $this->tenants()->where('tenants.id', $tenantId)->first();
+        }
 }

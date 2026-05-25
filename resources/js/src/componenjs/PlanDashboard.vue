@@ -75,19 +75,38 @@ const changePlan = async () => {
     return;
   }
 
-  await tenantStore.changePlan(selectedPlanId.value);
+  // Simulação local da troca de plano (mock)
+  const newPlan = plans.value.find(p => p.id === selectedPlanId.value);
+  if (newPlan) {
+    subscription.value = {
+      ...subscription.value,
+      plan: newPlan,
+      plan_id: newPlan.id,
+    };
+    // Adiciona um log localmente
+    logs.value.unshift({
+      id: Date.now(),
+      change_type: `Alteração para ${newPlan.name}`,
+      user: { name: 'Pedro Place' },
+      user_id: 1,
+      effective_at: new Date().toISOString(),
+    });
+  }
   showChangePlan.value = false;
-  await fetchData();
+  // Não chama fetchData para não sobrescrever o mock
 };
 
 const fetchData = async () => {
   const subData = await tenantStore.getSubscription();
   subscription.value = subData.subscription;
   usage.value = subData.usage;
-  const plansData = await tenantStore.getPlans();
-  plans.value = Array.isArray(plansData)
-    ? plansData
-    : (Array.isArray(plansData?.plans) ? plansData.plans : []);
+  // Mock de múltiplos planos para exibição
+  plans.value = [
+    { id: 1, name: 'Plano Básico', description: 'Ideal para pequenas empresas', is_active: true },
+    { id: 2, name: 'Plano Profissional', description: 'Recursos avançados para equipes', is_active: true },
+    { id: 3, name: 'Plano Premium', description: 'Tudo incluso e suporte prioritário', is_active: true },
+    { id: 4, name: 'Plano Enterprise', description: 'Soluções customizadas para grandes empresas', is_active: false },
+  ];
   selectedPlanId.value = subscription.value?.plan_id ?? null;
   const logsResponse = await tenantStore.getPlanLogs();
   logs.value = Array.isArray(logsResponse?.data) ? logsResponse.data : [];

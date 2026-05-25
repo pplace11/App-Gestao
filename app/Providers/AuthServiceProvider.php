@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Models\Company;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
@@ -15,7 +15,7 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+        Tenant::class => \App\Policies\TenantPolicy::class,
     ];
 
     /**
@@ -27,9 +27,16 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        Gate::define('access-tenant', function (User $user, Company $company) {
-            // Verifica se o usuário pertence ao tenant
-            return $user->companies()->where('companies.id', $company->id)->exists();
+        Gate::define('access-tenant', function (User $user, $tenant) {
+            // Permite Company para retrocompatibilidade, mas prioriza Tenant
+            if ($tenant instanceof \App\Models\Tenant) {
+                return $user->tenants()->where('tenants.id', $tenant->id)->exists();
+            }
+            // Se for Company, verifica se o usuário pertence à company
+            if ($tenant instanceof \App\Models\Company) {
+                return $user->companies()->where('companies.id', $tenant->id)->exists();
+            }
+            return false;
         });
     }
 }

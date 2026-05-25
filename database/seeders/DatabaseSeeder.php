@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             \Database\Seeders\EntitySeeder::class,
             UserSeeder::class,
+            TenantSeeder::class,
         ]);
     }
 }

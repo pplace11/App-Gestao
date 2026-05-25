@@ -19,7 +19,7 @@ class TenantOnboardingController extends Controller
     // Criação de novo tenant com wizard
     public function create(Request $request): JsonResponse
     {
-        $this->validate($request, [
+        $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:companies,slug',
             'plan_id' => 'required|exists:plans,id',

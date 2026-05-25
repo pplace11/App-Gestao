@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('countries', function (Blueprint $table) {
-            $table->id();
-            $table->string('name')->nullable()->unique();
-            $table->string('code', 2)->unique();
-            $table->boolean('active')->default(true);
-            $table->timestamps();
+        Schema::table('countries', function (Blueprint $table) {
+            $table->string('name')->nullable()->change();
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('countries');
+        Schema::table('countries', function (Blueprint $table) {
+            $table->string('name')->nullable(false)->change();
+        });
     }
 };

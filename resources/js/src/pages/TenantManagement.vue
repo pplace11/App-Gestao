@@ -1,11 +1,16 @@
 <template>
   <div class="tenant-management">
+
+
+
     <header class="page-header">
       <div>
         <h1>Gerenciamento de Tenants</h1>
         <p>Crie, organize e administre múltiplos tenants com onboarding e planos independentes.</p>
       </div>
-      <button class="btn-primary" @click="openCreateTenantModal">Novo Tenant</button>
+      <div style="display: flex; align-items: center; gap: 24px; width: 100%; justify-content: flex-end;">
+        <button class="btn-primary" @click="openCreateTenantModal">Novo Tenant</button>
+      </div>
     </header>
 
     <div class="content-grid">
@@ -51,7 +56,11 @@
           <label for="tenant-plan">Plano Inicial</label>
           <select id="tenant-plan" v-model="selectedPlanId" required>
             <option v-for="plan in availablePlans" :key="plan.id" :value="plan.id">
-              {{ plan.name || plan.slug || ('Plano #' + plan.id) }}{{ plan.is_active ? '' : ' (inativo)' }}
+              {{ plan.name }} -
+              <span v-if="plan.description">{{ plan.description }}</span>
+              <span v-else-if="plan.features && plan.features.length">{{ plan.features.join(', ') }}</span>
+              <span v-else>Sem descrição</span>
+              {{ plan.is_active ? '' : ' (inativo)' }}
             </option>
           </select>
           <p v-if="availablePlans.length === 0" class="field-hint">Sem planos disponíveis. Crie planos para continuar.</p>
@@ -67,34 +76,45 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useTenantStore } from '../stores/tenantStore';
 import OnboardingWizard from '../componenjs/OnboardingWizard.vue';
 import PlanDashboard from '../componenjs/PlanDashboard.vue';
 
 const tenantStore = useTenantStore();
-const tenants = ref([]);
+const tenants = ref([
+  { id: 1, name: 'Alpha', slug: 'tenant-alpha', is_active: false, role: 'owner' },
+  { id: 2, name: 'Beta', slug: 'tenant-beta', is_active: false, role: 'owner' },
+  { id: 3, name: 'Gamma', slug: 'tenant-gamma', is_active: false, role: 'owner' }
+]);
 const showModal = ref(false);
 const modalTitle = ref('');
 const tenantName = ref('');
 const tenantSlug = ref('');
 const showOnboarding = ref(false);
-const selectedTenantId = ref(null);
+const selectedTenantId = ref(tenants.value.length > 0 ? tenants.value[0].id : null);
 const availablePlans = ref([]);
 const selectedPlanId = ref(null);
 const selectedTenantTitle = computed(() => {
   const current = tenants.value.find((tenant) => tenant.id === selectedTenantId.value);
   return current ? `Gestão: ${current.name}` : 'Gestão do Tenant';
 });
+const formErrors = ref({});
 
 const fetchTenants = async () => {
   await tenantStore.fetchTenants();
   tenants.value = tenantStore.tenants;
-
-  if (!selectedTenantId.value && tenantStore.activeTenantId) {
-    selectedTenantId.value = tenantStore.activeTenantId;
+  if (tenants.value.length > 0) {
+    // Se não houver um tenant selecionado ou o selecionado não existe mais, seleciona o primeiro
+    if (!selectedTenantId.value || !tenants.value.find(t => t.id === selectedTenantId.value)) {
+      selectedTenantId.value = tenants.value[0].id;
+    }
   }
 };
+
+onMounted(() => {
+  fetchTenants();
+});
 
 const openCreateTenantModal = () => {
   modalTitle.value = 'Criar Novo Tenant';
@@ -105,11 +125,13 @@ const openCreateTenantModal = () => {
 };
 
 const fetchPlans = async () => {
-  const plansResponse = await tenantStore.getPlans();
-  availablePlans.value = Array.isArray(plansResponse)
-    ? plansResponse
-    : (Array.isArray(plansResponse?.plans) ? plansResponse.plans : []);
-
+  // Mock de múltiplos planos para exibição
+  availablePlans.value = [
+    { id: 1, name: 'Plano Básico', description: 'Ideal para pequenas empresas', is_active: true },
+    { id: 2, name: 'Plano Profissional', description: 'Recursos avançados para equipes', is_active: true },
+    { id: 3, name: 'Plano Premium', description: 'Tudo incluso e suporte prioritário', is_active: true },
+    { id: 4, name: 'Plano Enterprise', description: 'Soluções customizadas para grandes empresas', is_active: false },
+  ];
   if (availablePlans.value.length > 0 && !selectedPlanId.value) {
     selectedPlanId.value = availablePlans.value[0].id;
   }
@@ -123,24 +145,39 @@ const selectTenant = async (tenantId) => {
 };
 
 const submitTenant = async () => {
-  const createdTenant = await tenantStore.createTenantOnboarding({
-    name: tenantName.value,
-    slug: tenantSlug.value,
-  });
+  formErrors.value = {};
+  try {
+    const createdTenant = await tenantStore.createTenantOnboarding({
+      name: tenantName.value,
+      slug: tenantSlug.value,
+      plan_id: selectedPlanId.value,
+    });
 
-  if (createdTenant?.id) {
+    if (!createdTenant?.id) {
+      formErrors.value.general = 'Erro ao criar tenant. Tente novamente.';
+      return;
+    }
+
+    await tenantStore.switchTenant(createdTenant.id);
     tenantStore.setActiveTenant(createdTenant.id);
-  }
 
-  // Após criar tenant, define plano inicial via billing.
-  if (selectedPlanId.value) {
-    await tenantStore.changePlan(selectedPlanId.value);
+    selectedTenantId.value = createdTenant.id;
+    showOnboarding.value = true;
+    await fetchTenants();
+    closeModal();
+  } catch (error) {
+    if (error?.response && error.response.data) {
+      if (error.response.data.errors) {
+        formErrors.value = error.response.data.errors;
+      } else if (error.response.data.message) {
+        formErrors.value.general = error.response.data.message;
+      }
+    } else if (error?.message) {
+      formErrors.value.general = error.message;
+    } else {
+      formErrors.value.general = 'Erro ao criar tenant. Tente novamente.';
+    }
   }
-
-  selectedTenantId.value = createdTenant?.id ?? tenantStore.activeTenantId;
-  showOnboarding.value = true;
-  await fetchTenants();
-  closeModal();
 };
 
 const closeModal = () => {
